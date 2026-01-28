@@ -2,9 +2,8 @@ name: Daily Stock To Notion
 
 on:
   schedule:
-    # 每天北京时间 15:01 自动跑 (UTC 时间 7:01)
-    - cron: '1 7 * * *'
-  workflow_dispatch: # 保持这个，方便你手动测试
+    - cron: '1 7 * * *' # 北京时间 15:01
+  workflow_dispatch: 
 
 jobs:
   build:
@@ -19,23 +18,15 @@ jobs:
           python-version: '3.10'
 
       - name: 安装依赖插件
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
       - name: 执行分析并同步到 Notion
         env:
-          # 1. Notion 钥匙
+          # 所有的“钥匙”必须在这里声明，程序才能抓到它们
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-
-          # 2. AI 钥匙 (DeepSeek/Gemini)
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
-
-          # 3. 搜索服务 (Tavily) - 解决你提到的访问不到问题
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-
-          # 4. 股票列表 - 确保分析的是你指定的股票
           STOCK_LIST: ${{ secrets.STOCK_LIST }}
         run: python main.py
