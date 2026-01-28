@@ -835,56 +835,35 @@ def run_full_analysis(
         # 你的数据库 ID
         database_id = "bf217c149f1e4ab2918f58fc2a813213" 
 
-        if notion_token and results and not args.dry_run:
+if notion_token and results and not args.dry_run:
             logger.info("正在同步分析结果到 Notion...")
             notion = Client(auth=notion_token)
             for r in results:
-       try:
+                try:
                     today = datetime.now().strftime('%Y-%m-%d')
-                    # 1. 调用专业排版工具，把分析结果转成文字
+                    # 使用专业排版工具处理，解决“乱码”问题
                     report_text = pipeline.notifier.generate_single_stock_report(r)
                     
-                    # 2. 尝试获取真实的涨跌幅数值（1% 对应 Notion 的 0.01）
-                    change_val = getattr(r, 'change', 0.0)
+                    # 尝试从多个可能的字段中抓取涨跌幅
+                    change_val = getattr(r, 'change', getattr(r, 'pct_chg', 0.0))
 
-                    # 3. 配置表格的每一列（属性）
                     properties = {
                         "Stock name": {"title": [{"text": {"content": f"{r.name}({r.code})"}}]},
                         "分析日期": {"date": {"start": today}},
+                        # Notion 百分比格式：0.01 代表 1%
                         "涨跌幅%": {"number": float(change_val) / 100 if change_val else 0.0}, 
-                        # --- 将内容填入“完整分析”这一列 ---
-                        "完整分析": {"rich_text": [{"text": {"content": str(report_text)[:1900]}}]}
+                        # 核心修复：确保名字对上 Notion 表头，并加入 type: "text"
+                        "完整分析": {"rich_text": [{"type": "text", "text": {"content": str(report_text)[:1900]}}]}
                     }
                     
-                    # 4. 提交到 Notion
                     notion.pages.create(
                         parent={"database_id": database_id}, 
                         properties=properties
                     )
                     logger.info(f"Notion 同步成功: {r.name}")
-                    except Exception as e:  # <--- 【必须补上这一段，否则会崩溃】
+                except Exception as e:
+                    # 确保 except 和 try 垂直对齐，解决语法错误
                     logger.error(f"Notion 同步单条失败 ({r.name}): {e}")
-        # === 原有：生成飞书云文档逻辑（保持不变） ===
-        try:
-            feishu_doc = FeishuDocManager()
-            if feishu_doc.is_configured() and (results or market_report):
-                logger.info("正在创建飞书云文档...")
-                tz_cn = timezone(timedelta(hours=8))
-                now = datetime.now(tz_cn)
-                doc_title = f"{now.strftime('%Y-%m-%d %H:%M')} 大盘复盘"
-                full_content = ""
-                if market_report:
-                    full_content += f"# 📈 大盘复盘\n\n{market_report}\n\n---\n\n"
-                if results:
-                    dashboard_content = pipeline.notifier.generate_dashboard_report(results)
-                    full_content += f"# 🚀 个股决策仪表盘\n\n{dashboard_content}"
-                feishu_doc.create_daily_doc(doc_title, full_content)
-        except Exception as e:
-            logger.error(f"飞书文档生成失败: {e}")
-        
-    except Exception as e:
-        logger.exception(f"分析流程执行失败: {e}")
-
 
 def main() -> int:
     """
