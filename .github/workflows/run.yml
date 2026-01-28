@@ -23,9 +23,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: 执行分析并同步到 Notion
+       - name: 执行分析并同步到 Notion
         env:
-          # 从你的 GitHub Secrets 保险柜里取出钥匙
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          # 如果你的 DeepSeek 或 Gemini 需要 Key，也在这里添加
-          # DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          # 必须加上下面这几行，程序才能在自动运行时看到你的 DeepSeek Key
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
         run: python main.py
