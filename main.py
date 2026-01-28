@@ -839,28 +839,29 @@ def run_full_analysis(
             logger.info("正在同步分析结果到 Notion...")
             notion = Client(auth=notion_token)
             for r in results:
-                try:
+               try:
                     today = datetime.now().strftime('%Y-%m-%d')
-                    # 构造推送内容
+                    # 调用专业排版工具处理分析结果
+                    report_text = pipeline.notifier.generate_single_stock_report(r)
+                    
+                    # 尝试获取真实的涨跌幅数值（1% 对应 Notion 的 0.01）
+                    # 如果 AI 返回的数据里没直接带这个值，我们默认给 0.0
+                    change_val = getattr(r, 'change', 0.0)
+
                     properties = {
                         "Stock name": {"title": [{"text": {"content": f"{r.name}({r.code})"}}]},
                         "分析日期": {"date": {"start": today}},
-                        "涨跌幅%": {"number": 0.0}  # 涨跌幅由于原本模型不带，暂设为0，Notion内可手动改
+                        "涨跌幅%": {"number": float(change_val) / 100 if change_val else 0.0}, 
+                        # --- 核心修改：将内容填入“完整分析”这一列 ---
+                        "完整分析": {"rich_text": [{"text": {"content": str(report_text)[:1900]}}]}
                     }
-                   # 自动寻找 AI 的分析正文，防止属性名错误导致同步失败
-                    report_text = getattr(r, 'content', getattr(r, 'analysis', getattr(r, 'summary', str(r))))
                     
-                    children = [{
-                        "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": str(report_text)[:1900]}}]
-                        }
-                    }]
-                    notion.pages.create(parent={"database_id": database_id}, properties=properties, children=children)
+                    # 发送给 Notion，这次 properties 包含了所有列信息
+                    notion.pages.create(
+                        parent={"database_id": database_id}, 
+                        properties=properties
+                    )
                     logger.info(f"Notion 同步成功: {r.name}")
-                except Exception as e:
-                    logger.error(f"Notion 同步单条失败 ({r.name}): {e}")
 
         # === 原有：生成飞书云文档逻辑（保持不变） ===
         try:
