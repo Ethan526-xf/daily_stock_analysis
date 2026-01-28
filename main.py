@@ -847,10 +847,15 @@ def run_full_analysis(
                         "分析日期": {"date": {"start": today}},
                         "涨跌幅%": {"number": 0.0}  # 涨跌幅由于原本模型不带，暂设为0，Notion内可手动改
                     }
+                   # 自动寻找 AI 的分析正文，防止属性名错误导致同步失败
+                    report_text = getattr(r, 'content', getattr(r, 'analysis', getattr(r, 'summary', str(r))))
+                    
                     children = [{
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": [{"text": {"content": str(r.analysis)[:2000]}}]} # 限制2000字符防止报错
+                        "paragraph": {
+                            "rich_text": [{"type": "text", "text": {"content": str(report_text)[:2000]}}]
+                        }
                     }]
                     notion.pages.create(parent={"database_id": database_id}, properties=properties, children=children)
                     logger.info(f"Notion 同步成功: {r.name}")
