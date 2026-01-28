@@ -854,7 +854,7 @@ def run_full_analysis(
                         "object": "block",
                         "type": "paragraph",
                         "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": str(report_text)[:2000]}}]
+                            "rich_text": [{"type": "text", "text": {"content": str(report_text)[:1900]}}]
                         }
                     }]
                     notion.pages.create(parent={"database_id": database_id}, properties=properties, children=children)
