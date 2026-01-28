@@ -20,7 +20,7 @@ from notification import NotificationService
 from search_service import SearchService
 from market_analyzer import MarketAnalyzer
 
-# 日志配置
+# 标准日志格式
 LOG_FORMAT = '%(asctime)s | %(levelname)-8s | %(name)-20s | %(message)s'
 
 def setup_logging(debug: bool = False, log_dir: str = "./logs") -> None:
@@ -46,7 +46,7 @@ class StockAnalysisPipeline:
         self.analyzer = GeminiAnalyzer()
         self.notifier = NotificationService()
         
-        # 修复搜索服务：将环境变量字符串包装成列表
+        # 兼容 Tavily 搜索 key
         t_key = os.environ.get("TAVILY_API_KEYS") or os.environ.get("TAVILY_API_KEY")
         self.search_service = SearchService(
             bocha_keys=self.config.bocha_api_keys,
@@ -60,13 +60,12 @@ class StockAnalysisPipeline:
             current_pct = 0.0
             if realtime_quote:
                 stock_name = realtime_quote.name or stock_name
-                # 尝试抓取各种可能的涨跌幅字段名
                 current_pct = getattr(realtime_quote, 'pct_chg', getattr(realtime_quote, '涨跌幅', 0.0))
             
             context = self.db.get_analysis_context(code)
             if not context: return None
 
-            # 如果实时行情挂了，从历史数据保底抓取
+            # 保底逻辑：如果实时行情挂了，从历史记录抓取最后一天的涨跌幅
             if current_pct == 0.0 and context.get('raw_data'):
                 last_row = context['raw_data'][-1]
                 current_pct = last_row.get('涨跌幅', last_row.get('pct_chg', 0.0))
@@ -78,6 +77,7 @@ class StockAnalysisPipeline:
             
             result = self.analyzer.analyze(context, news_context=news_context)
             if result:
+                # --- 数据硬注入：将涨跌幅和名字传给结果对象 ---
                 result.name = stock_name
                 result.code = code
                 result.realtime_change = current_pct
@@ -110,19 +110,20 @@ def run_full_analysis(config, args, stock_codes):
             try:
                 today = datetime.now().strftime('%Y-%m-%d')
                 report_body = pipeline.notifier.generate_single_stock_report(r)
+                # 获取注入的涨跌幅数据
                 change_val = getattr(r, 'realtime_change', 0.0)
 
-                # 修正：确保 Properties 名字和 Notion 完全一致
                 properties = {
                     "Stock name": {"title": [{"text": {"content": f"{r.name}({r.code})"}}]},
                     "分析日期": {"date": {"start": today}},
                     "涨跌幅%": {"number": float(change_val) / 100}, 
+                    # 将正文填入表格的“完整分析”列
                     "完整分析": {"rich_text": [{"type": "text", "text": {"content": str(report_body)[:1900]}}]}
                 }
                 notion.pages.create(parent={"database_id": database_id}, properties=properties)
                 logger.info(f"✅ {r.name} 同步成功")
             except Exception as e:
-                # 修正：except 必须和 try 对齐
+                # 严格缩进，修复 IndentationError
                 logger.error(f"❌ 同步失败: {e}")
 
 def main():
