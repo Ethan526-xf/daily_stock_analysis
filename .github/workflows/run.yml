@@ -1,0 +1,31 @@
+name: Daily Stock To Notion
+
+on:
+  schedule:
+    # 每天北京时间 15:01 自动跑 (UTC 时间 7:01)
+    - cron: '1 7 * * *'
+  workflow_dispatch: # 保持这个，方便你手动测试
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖插件
+        run: |
+          pip install -r requirements.txt
+
+      - name: 执行分析并同步到 Notion
+        env:
+          # 从你的 GitHub Secrets 保险柜里取出钥匙
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          # 如果你的 DeepSeek 或 Gemini 需要 Key，也在这里添加
+          # DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: python main.py
