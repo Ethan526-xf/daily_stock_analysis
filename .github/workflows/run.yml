@@ -23,10 +23,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: 执行分析并同步到 Notion
-       - name: 执行分析并同步到 Notion
         env:
+          # 将 GitHub Secrets 保险柜里的钥匙精准传递给环境变量
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          # 必须加上下面这几行，程序才能在自动运行时看到你的 DeepSeek Key
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
