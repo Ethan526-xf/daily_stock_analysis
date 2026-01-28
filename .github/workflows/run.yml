@@ -24,9 +24,18 @@ jobs:
 
       - name: 执行分析并同步到 Notion
         env:
-          # 将 GitHub Secrets 保险柜里的钥匙精准传递给环境变量
+          # 1. Notion 钥匙
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+
+          # 2. AI 钥匙 (DeepSeek/Gemini)
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+
+          # 3. 搜索服务 (Tavily) - 解决你提到的访问不到问题
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+
+          # 4. 股票列表 - 确保分析的是你指定的股票
+          STOCK_LIST: ${{ secrets.STOCK_LIST }}
         run: python main.py
