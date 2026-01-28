@@ -850,7 +850,7 @@ def run_full_analysis(
                     children = [{
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {"rich_text": [{"text": {"content": str(r.content)[:2000]}}]} # 限制2000字符防止报错
+                        "paragraph": {"rich_text": [{"text": {"content": str(r.analysis)[:2000]}}]} # 限制2000字符防止报错
                     }]
                     notion.pages.create(parent={"database_id": database_id}, properties=properties, children=children)
                     logger.info(f"Notion 同步成功: {r.name}")
